@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://iaeste-lc-jecrc-member-portal-backe.vercel.app';
 
 export function getAuthToken() {
   return localStorage.getItem('authToken') || '';
