@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://iaeste-lc-jecrc-member-portal-backe.vercel.app';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export function getAuthToken() {
   return localStorage.getItem('authToken') || '';
@@ -37,9 +37,47 @@ export async function apiFetch(path, { method = 'GET', body, auth = true } = {})
 
   if (!res.ok) {
     const message = data?.message || `Request failed (${res.status})`;
-    throw new Error(message);
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
   }
 
+  return data;
+}
+
+/** Upload offer PDF (multipart). Returns { offer }. */
+export async function apiUploadOfferPdf(offerId, file) {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+  const formData = new FormData();
+  formData.append('pdf', file);
+  const res = await fetch(`${API_BASE_URL}/api/admin/offers/${offerId}/pdf`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!res.ok) throw new Error(data?.message || `Upload failed (${res.status})`);
+  return data;
+}
+
+export async function apiDeleteOfferPdf(offerId) {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE_URL}/api/admin/offers/${offerId}/pdf`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) throw new Error(data?.message || `Delete failed (${res.status})`);
   return data;
 }
 

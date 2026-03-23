@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
 import logo from '../assets/Iaeste Logo Standard 2.png';
@@ -8,6 +10,7 @@ import { apiFetch, setAuthSession } from '../utils/api';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -121,14 +124,48 @@ const Login = () => {
                                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 group-focus-within:text-[#0B3D59] transition-colors">
                                         Your Password
                                     </label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="••••••••"
-                                        className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0B3D59]/20 focus:border-[#0B3D59] transition-all shadow-sm group-hover:border-blue-300"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            required
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="••••••••"
+                                            className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0B3D59]/20 focus:border-[#0B3D59] transition-all shadow-sm group-hover:border-blue-300"
+                                        />
+                                        <button
+                                            type="button"
+                                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                            onClick={() => setShowPassword((s) => !s)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                        >
+                                            <AnimatePresence mode="wait">
+                                                {showPassword ? (
+                                                    <motion.span
+                                                        key="open-eye"
+                                                        initial={{ opacity: 0, rotate: -20, scale: 0.8 }}
+                                                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, rotate: 20, scale: 0.8 }}
+                                                        transition={{ duration: 0.18 }}
+                                                        className="flex items-center"
+                                                    >
+                                                        <VisibilityIcon />
+                                                    </motion.span>
+                                                ) : (
+                                                    <motion.span
+                                                        key="closed-eye"
+                                                        initial={{ opacity: 0, rotate: 20, scale: 0.8 }}
+                                                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, rotate: -20, scale: 0.8 }}
+                                                        transition={{ duration: 0.18 }}
+                                                        className="flex items-center"
+                                                    >
+                                                        <VisibilityOffIcon />
+                                                    </motion.span>
+                                                )}
+                                            </AnimatePresence>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <button

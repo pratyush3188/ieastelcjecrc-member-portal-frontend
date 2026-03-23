@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search as SearchIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import { apiFetch } from '../../utils/api';
+import { apiFetch, apiUploadOfferPdf, apiDeleteOfferPdf, API_BASE_URL, clearAuthSession } from '../../utils/api';
 
 export default function ManageOffers() {
+    const navigate = useNavigate();
     const [offers, setOffers] = useState([]);
     const [showAddOfferModal, setShowAddOfferModal] = useState(false);
     const [editingOfferId, setEditingOfferId] = useState(null);
     const [offerSearch, setOfferSearch] = useState('');
     const [offerFromDate, setOfferFromDate] = useState('');
     const [offerToDate, setOfferToDate] = useState('');
+    const [selectedPdfFile, setSelectedPdfFile] = useState(null);
     const [newOffer, setNewOffer] = useState({
         company: '',
         position: '',
@@ -25,7 +28,16 @@ export default function ManageOffers() {
     });
 
     const loadOffers = () => {
-        apiFetch('/api/admin/offers').then((r) => setOffers(r.offers || [])).catch(console.error);
+        apiFetch('/api/admin/offers')
+            .then((r) => setOffers(r.offers || []))
+            .catch((err) => {
+                if (err?.status === 403 || err?.message === 'Forbidden') {
+                    clearAuthSession();
+                    navigate('/login');
+                    return;
+                }
+                console.error(err);
+            });
     };
 
     useEffect(() => {
@@ -46,6 +58,7 @@ export default function ManageOffers() {
 
     const handleOpenCreate = () => {
         setEditingOfferId(null);
+        setSelectedPdfFile(null);
         setNewOffer({
             company: '', position: '', country: '', flag: '', duration: '', stipend: '', field: '', deadline: '',
             urgent: false, description: '', requirements: '',
@@ -55,6 +68,7 @@ export default function ManageOffers() {
 
     const handleEditOfferClick = (offer) => {
         setEditingOfferId(offer._id || offer.id);
+        setSelectedPdfFile(null);
         setNewOffer({
             company: offer.company || '',
             position: offer.position || '',
@@ -74,34 +88,56 @@ export default function ManageOffers() {
     const handleAddOffer = (e) => {
         e.preventDefault();
         const run = async () => {
+            let offerId = editingOfferId;
             if (editingOfferId) {
                 await apiFetch(`/api/admin/offers/${editingOfferId}`, { method: 'PATCH', body: newOffer });
                 alert('Offer Updated Successfully!');
             } else {
-                await apiFetch('/api/admin/offers', { method: 'POST', body: newOffer });
+                const res = await apiFetch('/api/admin/offers', { method: 'POST', body: newOffer });
+                offerId = res?.offer?._id || res?.offer?.id;
                 alert('Offer Created Successfully!');
+            }
+            if (selectedPdfFile && offerId) {
+                await apiUploadOfferPdf(offerId, selectedPdfFile);
+                alert('PDF uploaded successfully.');
             }
             loadOffers();
             setShowAddOfferModal(false);
             setEditingOfferId(null);
+            setSelectedPdfFile(null);
             setNewOffer({
                 company: '', position: '', country: '', flag: '', duration: '', stipend: '', field: '', deadline: '',
                 urgent: false, description: '', requirements: '',
             });
         };
-        run().catch((err) => alert(err?.message || 'Failed to save offer'));
+        run().catch((err) => {
+            if (err?.status === 403 || err?.message === 'Forbidden') {
+                clearAuthSession();
+                navigate('/login');
+                return;
+            }
+            alert(err?.message || 'Failed to save offer');
+        });
     };
 
     const handleDeleteOffer = (offerId) => {
         if (!window.confirm('Are you sure you want to delete this offer?')) return;
         apiFetch(`/api/admin/offers/${offerId}`, { method: 'DELETE' })
             .then(() => loadOffers())
-            .catch((err) => alert(err?.message || 'Failed to delete offer'));
+            .catch((err) => {
+                if (err?.status === 403 || err?.message === 'Forbidden') {
+                    clearAuthSession();
+                    navigate('/login');
+                    return;
+                }
+                alert(err?.message || 'Failed to delete offer');
+            });
     };
 
     const closeModal = () => {
         setShowAddOfferModal(false);
         setEditingOfferId(null);
+        setSelectedPdfFile(null);
         setNewOffer({
             company: '', position: '', country: '', flag: '', duration: '', stipend: '', field: '', deadline: '',
             urgent: false, description: '', requirements: '',
@@ -339,6 +375,46 @@ export default function ManageOffers() {
                                     className="w-5 h-5 text-[#0B3D59] rounded"
                                 />
                                 <label htmlFor="urgent" className="text-sm font-bold text-gray-700 cursor-pointer">Mark as Urgent</label>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">Offer PDF (optional)</label>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="file"
+                                            accept="application/pdf"
+                                            onChange={(e) => setSelectedPdfFile(e.target.files?.[0] || null)}
+                                            className="flex-1 border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-[#0B3D59] outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#0B3D59] file:text-white file:text-sm file:font-semibold"
+                                        />
+                                        {editingOfferId && offers.find((o) => (o._id || o.id) === editingOfferId)?.pdfPath && !selectedPdfFile && (
+                                            <div className="flex items-center space-x-2">
+                                                <a
+                                                    href="#"
+                                                    onClick={(e) => { e.preventDefault(); const p = offers.find((o) => (o._id || o.id) === editingOfferId).pdfPath; if (p) window.open(`${API_BASE_URL}${p}`, '_blank'); }}
+                                                    className="text-xs text-gray-700 underline"
+                                                >
+                                                    View uploaded PDF
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    onClick={async (e) => {
+                                                        e.preventDefault();
+                                                        if (!window.confirm('Delete the uploaded PDF?')) return;
+                                                        try {
+                                                            await apiDeleteOfferPdf(editingOfferId);
+                                                            alert('PDF deleted');
+                                                            loadOffers();
+                                                        } catch (err) {
+                                                            alert(err?.message || 'Failed to delete PDF');
+                                                        }
+                                                    }}
+                                                    className="text-xs text-red-600 hover:underline"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        )}
+                                        {selectedPdfFile && <p className="text-xs text-green-600">{selectedPdfFile.name}</p>}
+                                    </div>
                             </div>
                             <div className="pt-4 border-t border-gray-100 flex justify-end space-x-4">
                                 <button type="button" onClick={closeModal} className="px-6 py-3 rounded-lg text-gray-500 font-bold hover:bg-gray-100">

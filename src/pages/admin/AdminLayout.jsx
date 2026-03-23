@@ -26,8 +26,7 @@ export default function AdminLayout() {
     const location = useLocation();
     const pageTitle = getPageTitle(location.pathname);
 
-    useEffect(() => {
-        document.title = `Admin | IAESTE LC JECRC`;
+    const verifyAdmin = () => {
         const token = getAuthToken();
         if (!token) {
             navigate('/login');
@@ -44,6 +43,31 @@ export default function AdminLayout() {
                 clearAuthSession();
                 navigate('/login');
             });
+    };
+
+    useEffect(() => {
+        document.title = `Admin | IAESTE LC JECRC`;
+        verifyAdmin();
+    }, [navigate]);
+
+    useEffect(() => {
+        const onFocus = () => {
+            const token = getAuthToken();
+            if (!token) return;
+            apiFetch('/api/me')
+                .then((me) => {
+                    if (me?.user?.role !== 'admin') {
+                        clearAuthSession();
+                        navigate('/login');
+                    }
+                })
+                .catch(() => {
+                    clearAuthSession();
+                    navigate('/login');
+                });
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
     }, [navigate]);
 
     useEffect(() => {
