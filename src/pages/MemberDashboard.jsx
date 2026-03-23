@@ -26,7 +26,7 @@ import {
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
     Menu as MenuIcon,
-    KeyboardArrowDown as ArrowDownIcon
+    KeyboardArrowDown as ArrowDownIcon,
     PictureAsPdf as PdfIcon,
     Info as InfoIcon,
     Article as ArticleIcon
