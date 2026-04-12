@@ -29,7 +29,8 @@ import {
     KeyboardArrowDown as ArrowDownIcon,
     PictureAsPdf as PdfIcon,
     Info as InfoIcon,
-    Article as ArticleIcon
+    Article as ArticleIcon,
+    CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
 import {
     Chart as ChartJS,
@@ -52,6 +53,22 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 const MEMBER_TABS = ['dashboard', 'offers', 'applications', 'nomination', 'notifications', 'documents', 'saved', 'profile', 'settings'];
 
+const OFFER_CATEGORIES = ['all', 'CS & IT', 'Mech', 'Civil', 'Elec', 'Electronics', 'Eco', 'Mgmt', 'Bio/Chem', 'Other'];
+
+const mapFieldToCategory = (field) => {
+    if (!field) return 'Other';
+    const f = field.toLowerCase();
+    if (f.includes('computer') || f.includes('software') || f.includes('cs') || f.includes('information technology') || f.includes('it') || f.includes('data science') || f.includes('web') || f.includes('python') || f.includes('java')) return 'CS & IT';
+    if (f.includes('mechanical') || f.includes('mechatronics') || f.includes('mech')) return 'Mech';
+    if (f.includes('civil') || f.includes('architecture') || f.includes('construction')) return 'Civil';
+    if (f.includes('electrical') || f.includes('ee')) return 'Elec';
+    if (f.includes('electronics') || f.includes('ece') || f.includes('embedded') || f.includes('telecom')) return 'Electronics';
+    if (f.includes('economics') || f.includes('finance') || f.includes('eco')) return 'Eco';
+    if (f.includes('management') || f.includes('business') || f.includes('mba') || f.includes('hr')) return 'Mgmt';
+    if (f.includes('biology') || f.includes('biotech') || f.includes('chemistry') || f.includes('chemical') || f.includes('pharm') || f.includes('bio')) return 'Bio/Chem';
+    return 'Other';
+};
+
 // Mock Data
 const OFFERS = [
     { id: 1, country: 'Germany', company: 'BMW Group', position: 'Software Engineering Intern', duration: '6 Months', stipend: '€1200/mo', field: 'Computer Science', deadline: '2026-03-01', urgent: true },
@@ -73,6 +90,8 @@ export default function MemberDashboard() {
     const [notifications, setNotifications] = useState([]);
     const [showNotificationBanner, setShowNotificationBanner] = useState(true);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const [filterField, setFilterField] = useState('all');
+    const [offerSearch, setOfferSearch] = useState('');
 
     const navigate = useNavigate();
     const { tab: urlTab } = useParams();
@@ -685,44 +704,68 @@ export default function MemberDashboard() {
                                 <div className="flex items-center text-sm text-gray-600">
                                     <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
                                 </div>
-                                <div className="flex items-center text-sm text-gray-600">
-                                    <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
+                                {isApplied && (
+                                    <span className="absolute top-4 left-4 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">
+                                        APPLIED
+                                    </span>
+                                )}
+                                <div className="flex items-center mb-4 mt-2">
+                                    <span className="text-3xl mr-4">🌐</span>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors line-clamp-1">{offer.company}</h3>
+                                        <p className="text-sm text-gray-500">{offer.country}</p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center text-sm text-gray-600">
-                                    <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                <div className="space-y-3 mb-6">
+                                    <h4 className="font-semibold text-gray-700 min-h-[48px] line-clamp-2">{offer.position}</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex items-center text-xs text-gray-600">
+                                            <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
+                                        </div>
+                                        <div className="flex items-center text-xs text-gray-600">
+                                            <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
+                                        </div>
+                                        <div className="flex items-center text-xs text-gray-600 truncate">
+                                            <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                        </div>
+                                        <div className="flex items-center text-xs font-bold text-[#D62828]">
+                                            <CalendarIcon className="w-4 h-4 mr-2 text-[#D62828]/60" /> {offer.deadline}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${isSaved
-                                        ? 'bg-[#003366] text-white border-[#003366]'
-                                        : 'bg-[#F4F6F8] text-[#003366] border-gray-200 hover:bg-[#003366] hover:text-white'
-                                        }`}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleSaveOffer(offerId);
-                                    }}
-                                >
-                                    {isSaved ? 'Saved' : 'Save'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="flex-1 py-2 rounded-lg bg-[#F4F6F8] text-[#003366] font-semibold hover:bg-[#003366] hover:text-white transition-all text-xs"
-                                    onClick={() => setSelectedOffer(offer)}
-                                >
-                                    View Details
-                                </button>
-                            </div>
-                        </motion.div>
-                    );
-                })}
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${isSaved
+                                            ? 'bg-[#003366] text-white border-[#003366]'
+                                            : 'bg-[#F4F6F8] text-[#003366] border-gray-200 hover:bg-[#003366] hover:text-white'
+                                            }`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleSaveOffer(offerId);
+                                        }}
+                                    >
+                                        {isSaved ? 'Saved' : 'Save'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="flex-1 py-2 rounded-lg bg-[#F4F6F8] text-[#003366] font-semibold hover:bg-[#003366] hover:text-white transition-all text-xs"
+                                        onClick={() => setSelectedOffer(offer)}
+                                    >
+                                        View Details
+                                    </button>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const SavedOffersView = () => {
-        const savedOffers = offers.filter(o => savedOfferIds.includes(o._id || o.id));
+        const currentOffers = Array.isArray(offers) ? offers : [];
+        const savedOffers = currentOffers.filter(o => savedOfferIds.includes(o._id || o.id));
         if (!savedOffers.length) {
             return (
                 <div className="flex items-center justify-center h-64 text-gray-400">
@@ -742,6 +785,17 @@ export default function MemberDashboard() {
                         const offerId = offer._id || offer.id;
                         const isSaved = savedOfferIds.includes(offerId);
                         const isApplied = applications.some(app => (app.offerId?.toString?.() || app.offerId) === offerId || app.offer?._id === offerId);
+                        
+                        // Calculate Deadline Nearby
+                        let isDeadlineNearby = !!offer.deadlineNearby;
+                        if (!isDeadlineNearby && offer.deadline) {
+                            const deadlineDate = new Date(offer.deadline);
+                            const today = new Date();
+                            const diffTime = deadlineDate - today;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays >= 0 && diffDays <= 3) isDeadlineNearby = true;
+                        }
+
                         return (
                             <motion.div
                                 key={offerId}
@@ -1180,12 +1234,12 @@ export default function MemberDashboard() {
                                         <td className="px-6 py-4 text-sm text-gray-500">{date}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                                app.status === 'Selected' ? 'bg-green-100 text-green-700' :
-                                                app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                                app.status === 'Shortlisted' ? 'bg-yellow-100 text-yellow-700' :
+                                                app.status === 'Employer Checked' ? 'bg-green-100 text-green-700' :
+                                                app.status === 'Proceed to Nomination Packet' ? 'bg-purple-100 text-purple-700' :
+                                                app.status === 'Selected at LC Level' ? 'bg-yellow-100 text-yellow-700' :
                                                 'bg-blue-50 text-blue-700'
                                             }`}>
-                                                {app.status || 'Submitted'}
+                                                {app.status || 'Received'}
                                             </span>
                                         </td>
                                     </tr>

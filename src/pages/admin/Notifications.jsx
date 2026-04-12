@@ -12,6 +12,8 @@ export default function Notifications() {
     const [sending, setSending] = useState(false);
     const [msg, setMsg] = useState('');
     const [err, setErr] = useState('');
+    const [duration, setDuration] = useState('24'); // Default 24 hours
+    const [durationUnit, setDurationUnit] = useState('hours');
 
     const loadData = () => {
         Promise.all([
@@ -56,9 +58,15 @@ export default function Notifications() {
                 );
                 recipientIds = userIds.filter(Boolean);
             }
+            const now = new Date();
+            let expiresAt = new Date(now);
+            if (durationUnit === 'hours') expiresAt.setHours(now.getHours() + parseInt(duration));
+            else if (durationUnit === 'days') expiresAt.setDate(now.getDate() + parseInt(duration));
+            else if (durationUnit === 'weeks') expiresAt.setDate(now.getDate() + (parseInt(duration) * 7));
+
             await apiFetch('/api/admin/notifications', {
                 method: 'POST',
-                body: { title: title.trim(), body: body.trim(), recipientIds },
+                body: { title: title.trim(), body: body.trim(), recipientIds, expiresAt },
             });
             setMsg('Notification sent successfully!');
             setTitle('');
@@ -108,6 +116,28 @@ export default function Notifications() {
                                 <input type="radio" name="recipient" checked={recipientType === 'individual'} onChange={() => setRecipientType('individual')} />
                                 <span>Selected Members</span>
                             </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Visible For (Duration)*</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                min="1"
+                                value={duration}
+                                onChange={(e) => setDuration(e.target.value)}
+                                className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0B3D59]/20"
+                            />
+                            <select
+                                value={durationUnit}
+                                onChange={(e) => setDurationUnit(e.target.value)}
+                                className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0B3D59]/20"
+                            >
+                                <option value="hours">Hours</option>
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                            </select>
+                            <p className="text-[10px] text-gray-400 self-center">Notification will disappear after this time.</p>
                         </div>
                     </div>
                     {recipientType === 'individual' && (

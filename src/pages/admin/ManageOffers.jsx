@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search as SearchIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Cancel as CancelIcon, Work as WorkIcon } from '@mui/icons-material';
 import { apiFetch, apiUploadOfferPdf, apiDeleteOfferPdf, API_BASE_URL, clearAuthSession } from '../../utils/api';
+import { School as FieldIcon } from '@mui/icons-material';
+
+const OFFER_CATEGORIES = ['all', 'CS', 'IT', 'Mech', 'Civil', 'Elec', 'Electronics', 'Eco', 'Mgmt', 'Bio/Chem', 'Other'];
+
+const mapFieldToCategory = (field) => {
+    if (!field) return 'Other';
+    const f = field.toLowerCase();
+    if (f.includes('computer') || f.includes('software') || f.includes('cs')) return 'CS';
+    if (f.includes('information technology') || f.includes('it') || f.includes('data science') || f.includes('web') || f.includes('python') || f.includes('java')) return 'IT';
+    if (f.includes('mechanical') || f.includes('mechatronics') || f.includes('mech')) return 'Mech';
+    if (f.includes('civil') || f.includes('architecture') || f.includes('construction')) return 'Civil';
+    if (f.includes('electrical') || f.includes('ee')) return 'Elec';
+    if (f.includes('electronics') || f.includes('ece') || f.includes('embedded') || f.includes('telecom')) return 'Electronics';
+    if (f.includes('economics') || f.includes('finance') || f.includes('eco')) return 'Eco';
+    if (f.includes('management') || f.includes('business') || f.includes('mba') || f.includes('hr')) return 'Mgmt';
+    if (f.includes('biology') || f.includes('biotech') || f.includes('chemistry') || f.includes('chemical') || f.includes('pharm') || f.includes('bio')) return 'Bio/Chem';
+    return 'Other';
+};
 
 export default function ManageOffers() {
     const navigate = useNavigate();
@@ -12,6 +30,7 @@ export default function ManageOffers() {
     const [offerSearch, setOfferSearch] = useState('');
     const [offerFromDate, setOfferFromDate] = useState('');
     const [offerToDate, setOfferToDate] = useState('');
+    const [filterField, setFilterField] = useState('all');
     const [selectedPdfFile, setSelectedPdfFile] = useState(null);
     const [newOffer, setNewOffer] = useState({
         offerNumber: '',
@@ -23,6 +42,7 @@ export default function ManageOffers() {
         field: '',
         deadline: '',
         urgent: false,
+        deadlineNearby: false,
         description: '',
         requirements: '',
     });
@@ -53,6 +73,7 @@ export default function ManageOffers() {
         if (!matchesSearch) return false;
         if (offerFromDate && deadline < offerFromDate) return false;
         if (offerToDate && deadline > offerToDate) return false;
+        if (filterField !== 'all' && mapFieldToCategory(offer.field) !== filterField) return false;
         return true;
     });
 
@@ -61,7 +82,7 @@ export default function ManageOffers() {
         setSelectedPdfFile(null);
         setNewOffer({
             offerNumber: '', company: '', position: '', country: '', duration: '', stipend: '', field: '', deadline: '',
-            urgent: false, description: '', requirements: '',
+            urgent: false,deadlineNearby: false, description: '', requirements: '',
         });
         setShowAddOfferModal(true);
     };
@@ -79,6 +100,7 @@ export default function ManageOffers() {
             field: offer.field || '',
             deadline: offer.deadline || '',
             urgent: !!offer.urgent,
+            deadlineNearby: !!offer.deadlineNearby,
             description: offer.description || '',
             requirements: offer.requirements || '',
         });
@@ -107,7 +129,7 @@ export default function ManageOffers() {
             setSelectedPdfFile(null);
             setNewOffer({
                 offerNumber: '', company: '', position: '', country: '', duration: '', stipend: '', field: '', deadline: '',
-                urgent: false, description: '', requirements: '',
+                urgent: false,deadlineNearby: false, description: '', requirements: '',
             });
         };
         run().catch((err) => {
@@ -140,7 +162,7 @@ export default function ManageOffers() {
         setSelectedPdfFile(null);
         setNewOffer({
             offerNumber: '', company: '', position: '', country: '', duration: '', stipend: '', field: '', deadline: '',
-            urgent: false, description: '', requirements: '',
+            urgent: false, deadlineNearby: false, description: '', requirements: '',
         });
     };
 
