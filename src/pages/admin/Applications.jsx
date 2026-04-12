@@ -20,10 +20,10 @@ import {
 import { apiFetch } from '../../utils/api';
 
 const STATUS_COLORS = {
-    Submitted: 'bg-blue-50 text-blue-700 ring-blue-200',
-    Shortlisted: 'bg-yellow-50 text-yellow-700 ring-yellow-200',
-    Selected: 'bg-green-50 text-green-700 ring-green-200',
-    Rejected: 'bg-red-50 text-red-700 ring-red-200',
+    'Received': 'bg-blue-50 text-blue-700 ring-blue-200',
+    'Selected at LC Level': 'bg-yellow-50 text-yellow-700 ring-yellow-200',
+    'Employer Checked': 'bg-green-50 text-green-700 ring-green-200',
+    'Proceed to Nomination Packet': 'bg-purple-50 text-purple-700 ring-purple-200',
 };
 
 export default function Applications() {
@@ -91,10 +91,10 @@ export default function Applications() {
 
     const stats = {
         total: applications.length,
-        submitted: applications.filter(a => a.status === 'Submitted').length,
-        shortlisted: applications.filter(a => a.status === 'Shortlisted').length,
-        selected: applications.filter(a => a.status === 'Selected').length,
-        rejected: applications.filter(a => a.status === 'Rejected').length,
+        received: applications.filter(a => a.status === 'Received').length,
+        selectedLC: applications.filter(a => a.status === 'Selected at LC Level').length,
+        employerChecked: applications.filter(a => a.status === 'Employer Checked').length,
+        proceedNomination: applications.filter(a => a.status === 'Proceed to Nomination Packet').length,
     };
 
     if (loading) {
@@ -116,10 +116,10 @@ export default function Applications() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {[
                     { label: 'Total', value: stats.total, color: '#003366' },
-                    { label: 'Submitted', value: stats.submitted, color: '#3B82F6' },
-                    { label: 'Shortlisted', value: stats.shortlisted, color: '#F59E0B' },
-                    { label: 'Selected', value: stats.selected, color: '#10B981' },
-                    { label: 'Rejected', value: stats.rejected, color: '#EF4444' },
+                    { label: 'Received', value: stats.received, color: '#3B82F6' },
+                    { label: 'Selected @ LC', value: stats.selectedLC, color: '#F59E0B' },
+                    { label: 'Employer Checked', value: stats.employerChecked, color: '#10B981' },
+                    { label: 'Proceed to Nomination', value: stats.proceedNomination, color: '#8B5CF6' },
                 ].map(s => (
                     <div
                         key={s.label}
@@ -152,10 +152,10 @@ export default function Applications() {
                         className="px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]/20"
                     >
                         <option value="all">All Status</option>
-                        <option value="Submitted">Submitted</option>
-                        <option value="Shortlisted">Shortlisted</option>
-                        <option value="Selected">Selected</option>
-                        <option value="Rejected">Rejected</option>
+                        <option value="Received">Received</option>
+                        <option value="Selected at LC Level">Selected at LC Level</option>
+                        <option value="Employer Checked">Employer Checked</option>
+                        <option value="Proceed to Nomination Packet">Proceed to Nomination Packet</option>
                     </select>
                 </div>
             </div>
@@ -356,16 +356,16 @@ function ApplicationDetailModal({ app, onClose, onStatusChange, updating }) {
                                     disabled={updating}
                                     onChange={e => onStatusChange(app._id, e.target.value)}
                                     className={`px-4 py-2 rounded-lg text-sm font-bold border focus:outline-none focus:ring-2 focus:ring-[#003366]/20 ${
-                                        app.status === 'Selected' ? 'bg-green-50 text-green-700 border-green-200' :
-                                        app.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                                        app.status === 'Shortlisted' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                        app.status === 'Employer Checked' ? 'bg-green-50 text-green-700 border-green-200' :
+                                        app.status === 'Proceed to Nomination Packet' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                        app.status === 'Selected at LC Level' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                                         'bg-blue-50 text-blue-700 border-blue-200'
                                     } disabled:opacity-60`}
                                 >
-                                    <option value="Submitted">Submitted</option>
-                                    <option value="Shortlisted">Shortlisted</option>
-                                    <option value="Selected">Selected</option>
-                                    <option value="Rejected">Rejected</option>
+                                    <option value="Received">Received</option>
+                                    <option value="Selected at LC Level">Selected at LC Level</option>
+                                    <option value="Employer Checked">Employer Checked</option>
+                                    <option value="Proceed to Nomination Packet">Proceed to Nomination Packet</option>
                                 </select>
                             </div>
                         </div>
