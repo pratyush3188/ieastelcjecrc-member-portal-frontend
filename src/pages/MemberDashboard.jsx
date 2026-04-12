@@ -27,9 +27,13 @@ import {
     ChevronRight as ChevronRightIcon,
     Menu as MenuIcon,
     KeyboardArrowDown as ArrowDownIcon,
+<<<<<<< Updated upstream
     PictureAsPdf as PdfIcon,
     Info as InfoIcon,
     Article as ArticleIcon
+=======
+    CalendarMonth as CalendarIcon
+>>>>>>> Stashed changes
 } from '@mui/icons-material';
 import {
     Chart as ChartJS,
@@ -52,12 +56,29 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 const MEMBER_TABS = ['dashboard', 'offers', 'applications', 'nomination', 'notifications', 'documents', 'saved', 'profile', 'settings'];
 
+const OFFER_CATEGORIES = ['all', 'CS & IT', 'Mech', 'Civil', 'Elec', 'Electronics', 'Eco', 'Mgmt', 'Bio/Chem', 'Other'];
+
+const mapFieldToCategory = (field) => {
+    if (!field) return 'Other';
+    const f = field.toLowerCase();
+    if (f.includes('computer') || f.includes('software') || f.includes('cs') || f.includes('information technology') || f.includes('it') || f.includes('data science') || f.includes('web') || f.includes('python') || f.includes('java')) return 'CS & IT';
+    if (f.includes('mechanical') || f.includes('mechatronics') || f.includes('mech')) return 'Mech';
+    if (f.includes('civil') || f.includes('architecture') || f.includes('construction')) return 'Civil';
+    if (f.includes('electrical') || f.includes('ee')) return 'Elec';
+    if (f.includes('electronics') || f.includes('ece') || f.includes('embedded') || f.includes('telecom')) return 'Electronics';
+    if (f.includes('economics') || f.includes('finance') || f.includes('eco')) return 'Eco';
+    if (f.includes('management') || f.includes('business') || f.includes('mba') || f.includes('hr')) return 'Mgmt';
+    if (f.includes('biology') || f.includes('biotech') || f.includes('chemistry') || f.includes('chemical') || f.includes('pharm') || f.includes('bio')) return 'Bio/Chem';
+    return 'Other';
+};
+
 // Mock Data
 const OFFERS = [
     { id: 1, country: 'Germany', flag: '🇩🇪', company: 'BMW Group', position: 'Software Engineering Intern', duration: '6 Months', stipend: '€1200/mo', field: 'Computer Science', deadline: '2026-03-01', urgent: true },
     { id: 2, country: 'Switzerland', flag: '🇨🇭', company: 'CERN', position: 'Research Assistant', duration: '12 Months', stipend: 'CHF 3500/mo', field: 'Physics / IT', deadline: '2026-03-15', urgent: false },
     { id: 3, country: 'Japan', flag: '🇯🇵', company: 'Toyota', position: 'R&D Intern', duration: '3 Months', stipend: '¥150,000/mo', field: 'Mechanical Eng.', deadline: '2026-02-28', urgent: true },
     { id: 4, country: 'Sweden', flag: '🇸🇪', company: 'Spotify', position: 'Data Science Intern', duration: '6 Months', stipend: 'SEK 25,000/mo', field: 'Data Science', deadline: '2026-04-10', urgent: false },
+    { id: 5, country: 'USA', flag: '🇺🇸', company: 'Goldman Sachs', position: 'Financial Analyst Intern', duration: '3 Months', stipend: '$2500/mo', field: 'Economics / Finance', deadline: '2026-05-01', urgent: false },
 ];
 
 export default function MemberDashboard() {
@@ -73,6 +94,8 @@ export default function MemberDashboard() {
     const [notifications, setNotifications] = useState([]);
     const [showNotificationBanner, setShowNotificationBanner] = useState(true);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const [filterField, setFilterField] = useState('all');
+    const [offerSearch, setOfferSearch] = useState('');
 
     const navigate = useNavigate();
     const { tab: urlTab } = useParams();
@@ -642,80 +665,169 @@ export default function MemberDashboard() {
         );
     };
 
-    const OffersView = () => (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {offers.map(offer => {
-                    const offerId = offer._id || offer.id;
-                    const isSaved = savedOfferIds.includes(offerId);
-                    const isApplied = applications.some(app => (app.offerId?.toString?.() || app.offerId) === offerId || app.offer?._id === offerId);
-                    return (
-                        <motion.div
-                            key={offerId}
-                            whileHover={{ y: -5, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}
-                            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative group cursor-pointer"
-                            onClick={() => setSelectedOffer(offer)}
-                        >
-                            {offer.urgent && (
-                                <span className="absolute top-4 right-4 bg-[#D62828]/10 text-[#D62828] text-xs font-bold px-3 py-1 rounded-full">
-                                    URGENT
-                                </span>
-                            )}
-                            {isApplied && (
-                                <span className="absolute top-4 left-4 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">
-                                    APPLIED
-                                </span>
-                            )}
-                            <div className="flex items-center mb-4">
-                                <span className="text-4xl mr-4">{offer.flag}</span>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors">{offer.company}</h3>
-                                    <p className="text-sm text-gray-500">{offer.country}</p>
+    const OffersView = () => {
+        const currentOffers = Array.isArray(offers) ? offers : [];
+        const filteredOffers = currentOffers.filter(o => {
+            // Category Filter
+            if (filterField !== 'all' && mapFieldToCategory(o.field) !== filterField) return false;
+            
+            // Search Filter (ID, Country, Company, Position)
+            if (offerSearch) {
+                const q = offerSearch.toLowerCase();
+                const offerId = (o._id || o.id || '').toString().toLowerCase();
+                const country = (o.country || '').toLowerCase();
+                const company = (o.company || '').toLowerCase();
+                const position = (o.position || '').toLowerCase();
+                
+                return country.includes(q) || company.includes(q) || position.includes(q) || offerId.includes(q);
+            }
+            
+            return true;
+        });
+
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-[#003366] mb-1">Global Internships</h2>
+                    <p className="text-sm text-gray-500 mb-6">Explore and apply for international opportunities</p>
+                    
+                    <div className="space-y-4">
+                        {/* Search Bar - Full Width Top */}
+                        <div className="relative">
+                            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" style={{ fontSize: 22 }} />
+                            <input
+                                type="text"
+                                placeholder="Search by country, company, position or offer ID..."
+                                value={offerSearch}
+                                onChange={(e) => setOfferSearch(e.target.value)}
+                                className="w-full pl-12 pr-4 py-4 rounded-2xl border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-[#003366] shadow-sm text-base transition-all"
+                            />
+                        </div>
+                        
+                        {/* Filter Section - Below Search */}
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                <div className="flex items-center gap-2 min-w-max">
+                                    <FieldIcon className="text-[#003366]" />
+                                    <span className="text-sm font-bold text-gray-700">Filter by Category:</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {OFFER_CATEGORIES.map(f => (
+                                        <button
+                                            key={f}
+                                            onClick={() => setFilterField(f)}
+                                            className={`px-5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                                filterField === f
+                                                    ? 'bg-[#003366] text-white border-[#003366] shadow-md transform scale-105'
+                                                    : 'bg-white text-gray-600 border-gray-100 hover:border-[#003366] hover:text-[#003366] hover:bg-blue-50/50'
+                                            }`}
+                                        >
+                                            {f.toUpperCase()}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
-                            <div className="space-y-3 mb-6">
-                                <h4 className="font-semibold text-gray-700 min-h-[48px]">{offer.position}</h4>
-                                <div className="flex items-center text-sm text-gray-600">
-                                    <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredOffers.map(offer => {
+                        const offerId = offer._id || offer.id;
+                        const isSaved = savedOfferIds.includes(offerId);
+                        const isApplied = applications.some(app => (app.offerId?.toString?.() || app.offerId) === offerId || app.offer?._id === offerId);
+                        
+                        // Calculate Deadline Nearby
+                        let isDeadlineNearby = !!offer.deadlineNearby;
+                        if (!isDeadlineNearby && offer.deadline) {
+                            const deadlineDate = new Date(offer.deadline);
+                            const today = new Date();
+                            const diffTime = deadlineDate - today;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays >= 0 && diffDays <= 3) isDeadlineNearby = true;
+                        }
+
+                        return (
+                            <motion.div
+                                key={offerId}
+                                whileHover={{ y: -5, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}
+                                className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative group cursor-pointer"
+                                onClick={() => setSelectedOffer(offer)}
+                            >
+                                <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                                    {offer.urgent && (
+                                        <span className="bg-[#D62828]/10 text-[#D62828] text-[10px] font-bold px-2 py-1 rounded-full">
+                                            URGENT
+                                        </span>
+                                    )}
+                                    {isDeadlineNearby && (
+                                        <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full border border-orange-200">
+                                            DEADLINE NEARBY
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex items-center text-sm text-gray-600">
-                                    <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
+                                {isApplied && (
+                                    <span className="absolute top-4 left-4 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">
+                                        APPLIED
+                                    </span>
+                                )}
+                                <div className="flex items-center mb-4 mt-2">
+                                    <span className="text-3xl mr-4">🌐</span>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors line-clamp-1">{offer.company}</h3>
+                                        <p className="text-sm text-gray-500">{offer.country}</p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center text-sm text-gray-600">
-                                    <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                <div className="space-y-3 mb-6">
+                                    <h4 className="font-semibold text-gray-700 min-h-[48px] line-clamp-2">{offer.position}</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex items-center text-xs text-gray-600">
+                                            <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
+                                        </div>
+                                        <div className="flex items-center text-xs text-gray-600">
+                                            <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
+                                        </div>
+                                        <div className="flex items-center text-xs text-gray-600 truncate">
+                                            <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                        </div>
+                                        <div className="flex items-center text-xs font-bold text-[#D62828]">
+                                            <CalendarIcon className="w-4 h-4 mr-2 text-[#D62828]/60" /> {offer.deadline}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${isSaved
-                                        ? 'bg-[#003366] text-white border-[#003366]'
-                                        : 'bg-[#F4F6F8] text-[#003366] border-gray-200 hover:bg-[#003366] hover:text-white'
-                                        }`}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleSaveOffer(offerId);
-                                    }}
-                                >
-                                    {isSaved ? 'Saved' : 'Save'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="flex-1 py-2 rounded-lg bg-[#F4F6F8] text-[#003366] font-semibold hover:bg-[#003366] hover:text-white transition-all text-xs"
-                                    onClick={() => setSelectedOffer(offer)}
-                                >
-                                    View Details
-                                </button>
-                            </div>
-                        </motion.div>
-                    );
-                })}
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${isSaved
+                                            ? 'bg-[#003366] text-white border-[#003366]'
+                                            : 'bg-[#F4F6F8] text-[#003366] border-gray-200 hover:bg-[#003366] hover:text-white'
+                                            }`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleSaveOffer(offerId);
+                                        }}
+                                    >
+                                        {isSaved ? 'Saved' : 'Save'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="flex-1 py-2 rounded-lg bg-[#F4F6F8] text-[#003366] font-semibold hover:bg-[#003366] hover:text-white transition-all text-xs"
+                                        onClick={() => setSelectedOffer(offer)}
+                                    >
+                                        View Details
+                                    </button>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const SavedOffersView = () => {
-        const savedOffers = offers.filter(o => savedOfferIds.includes(o._id || o.id));
+        const currentOffers = Array.isArray(offers) ? offers : [];
+        const savedOffers = currentOffers.filter(o => savedOfferIds.includes(o._id || o.id));
         if (!savedOffers.length) {
             return (
                 <div className="flex items-center justify-center h-64 text-gray-400">
@@ -735,6 +847,17 @@ export default function MemberDashboard() {
                         const offerId = offer._id || offer.id;
                         const isSaved = savedOfferIds.includes(offerId);
                         const isApplied = applications.some(app => (app.offerId?.toString?.() || app.offerId) === offerId || app.offer?._id === offerId);
+                        
+                        // Calculate Deadline Nearby
+                        let isDeadlineNearby = !!offer.deadlineNearby;
+                        if (!isDeadlineNearby && offer.deadline) {
+                            const deadlineDate = new Date(offer.deadline);
+                            const today = new Date();
+                            const diffTime = deadlineDate - today;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays >= 0 && diffDays <= 3) isDeadlineNearby = true;
+                        }
+
                         return (
                             <motion.div
                                 key={offerId}
@@ -742,29 +865,45 @@ export default function MemberDashboard() {
                                 className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative group cursor-pointer"
                                 onClick={() => setSelectedOffer(offer)}
                             >
-                                {offer.urgent && (
-                                    <span className="absolute top-4 right-4 bg-[#D62828]/10 text-[#D62828] text-xs font-bold px-3 py-1 rounded-full">URGENT</span>
-                                )}
+                                <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                                    {offer.urgent && (
+                                        <span className="bg-[#D62828]/10 text-[#D62828] text-[10px] font-bold px-2 py-1 rounded-full">
+                                            URGENT
+                                        </span>
+                                    )}
+                                    {isDeadlineNearby && (
+                                        <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full border border-orange-200">
+                                            DEADLINE NEARBY
+                                        </span>
+                                    )}
+                                </div>
                                 {isApplied && (
-                                    <span className="absolute top-4 left-4 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">APPLIED</span>
+                                    <span className="absolute top-4 left-4 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">
+                                        APPLIED
+                                    </span>
                                 )}
-                                <div className="flex items-center mb-4">
-                                    <span className="text-4xl mr-4">{offer.flag}</span>
+                                <div className="flex items-center mb-4 mt-2">
+                                    <span className="text-3xl mr-4">🌐</span>
                                     <div>
-                                        <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors">{offer.company}</h3>
+                                        <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors line-clamp-1">{offer.company}</h3>
                                         <p className="text-sm text-gray-500">{offer.country}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-3 mb-6">
-                                    <h4 className="font-semibold text-gray-700 min-h-[48px]">{offer.position}</h4>
-                                    <div className="flex items-center text-sm text-gray-600">
-                                        <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
-                                    </div>
-                                    <div className="flex items-center text-sm text-gray-600">
-                                        <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
-                                    </div>
-                                    <div className="flex items-center text-sm text-gray-600">
-                                        <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                    <h4 className="font-semibold text-gray-700 min-h-[48px] line-clamp-2">{offer.position}</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex items-center text-xs text-gray-600">
+                                            <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
+                                        </div>
+                                        <div className="flex items-center text-xs text-gray-600">
+                                            <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
+                                        </div>
+                                        <div className="flex items-center text-xs text-gray-600 truncate">
+                                            <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                        </div>
+                                        <div className="flex items-center text-xs font-bold text-[#D62828]">
+                                            <CalendarIcon className="w-4 h-4 mr-2 text-[#D62828]/60" /> {offer.deadline}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -911,7 +1050,7 @@ export default function MemberDashboard() {
                             </button>
                         </div>
                         <div className="flex flex-col md:flex-row md:items-start">
-                            <span className="text-5xl md:text-6xl mr-6 shadow-lg rounded-lg mb-4 md:mb-0">{offer.flag}</span>
+                            <span className="text-5xl md:text-6xl mr-6 bg-white/10 p-4 rounded-xl shadow-lg mb-4 md:mb-0">🌐</span>
                             <div>
                                 <h2 className="text-2xl md:text-3xl font-bold mb-2">{offer.position}</h2>
                                 <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-blue-100 space-y-1 md:space-y-0">
@@ -1172,12 +1311,12 @@ export default function MemberDashboard() {
                                         <td className="px-6 py-4 text-sm text-gray-500">{date}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                                app.status === 'Selected' ? 'bg-green-100 text-green-700' :
-                                                app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                                app.status === 'Shortlisted' ? 'bg-yellow-100 text-yellow-700' :
+                                                app.status === 'Employer Checked' ? 'bg-green-100 text-green-700' :
+                                                app.status === 'Proceed to Nomination Packet' ? 'bg-purple-100 text-purple-700' :
+                                                app.status === 'Selected at LC Level' ? 'bg-yellow-100 text-yellow-700' :
                                                 'bg-blue-50 text-blue-700'
                                             }`}>
-                                                {app.status || 'Submitted'}
+                                                {app.status || 'Received'}
                                             </span>
                                         </td>
                                     </tr>

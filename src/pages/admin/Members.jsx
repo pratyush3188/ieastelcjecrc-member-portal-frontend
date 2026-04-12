@@ -16,6 +16,8 @@ function MemberDetailModal({ data, onClose, onApplicationUpdated }) {
     const [updatingId, setUpdatingId] = useState(null);
     const [editStatus, setEditStatus] = useState({});
     const [editReason, setEditReason] = useState({});
+    const [newPass, setNewPass] = useState('');
+    const [resetting, setResetting] = useState(false);
 
     if (!data) return null;
     const { membership, user, applications, stats } = data;
@@ -40,6 +42,29 @@ function MemberDetailModal({ data, onClose, onApplicationUpdated }) {
             alert(e?.message || 'Failed to update');
         } finally {
             setUpdatingId(null);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!newPass || newPass.length < 6) {
+            alert('Password must be at least 6 characters.');
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to reset the password for ${membership.fullName}? The member will need to use this new password to login.`)) {
+            return;
+        }
+        try {
+            setResetting(true);
+            await apiFetch(`/api/admin/members/${membership._id}/password`, {
+                method: 'PATCH',
+                body: { newPassword: newPass },
+            });
+            alert('Password updated successfully!');
+            setNewPass('');
+        } catch (e) {
+            alert(e?.message || 'Failed to update password');
+        } finally {
+            setResetting(false);
         }
     };
 
@@ -91,6 +116,34 @@ function MemberDetailModal({ data, onClose, onApplicationUpdated }) {
                             {membership?.createdAt && <DetailRow label="Joined" value={new Date(membership.createdAt).toLocaleString('en-IN')} />}
                         </div>
                     </div>
+
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                        <h4 className="text-sm font-bold text-red-800 mb-4">Account Security (Admin Override)</h4>
+                        <div className="flex flex-col md:flex-row items-end gap-4">
+                            <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Set New Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="Enter new password (min 6 chars)"
+                                    value={newPass}
+                                    onChange={(e) => setNewPass(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleResetPassword}
+                                disabled={resetting || !newPass}
+                                className="px-6 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all disabled:opacity-50"
+                            >
+                                {resetting ? 'Updating...' : 'Update Password'}
+                            </button>
+                        </div>
+                        <p className="mt-2 text-[10px] text-red-600 italic">
+                            * This will immediately change the member's login password. They will be logged out of other devices eventually.
+                        </p>
+                    </div>
+
                     <div className="bg-white border border-gray-100 rounded-xl p-4">
                         <h4 className="text-sm font-bold text-gray-700 mb-4">Offer Applications</h4>
                         <div className="overflow-x-auto">
