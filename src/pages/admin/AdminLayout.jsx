@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Menu as MenuIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Menu as MenuIcon } from '@mui/icons-material';
 import logo from '../../assets/Iaeste Logo Standard 2.png';
 import AdminSidebar from '../../components/AdminSidebar';
 import { apiFetch, clearAuthSession, getAuthToken } from '../../utils/api';
@@ -12,6 +12,7 @@ const PATH_TITLES = {
     '/admin-dashboard/applications': 'Applications',
     '/admin-dashboard/members': 'Members',
     '/admin-dashboard/notifications': 'Notifications',
+    '/admin-dashboard/recent-activity': 'Recent Activity',
     '/admin-dashboard/settings': 'Settings',
 };
 
@@ -22,6 +23,8 @@ function getPageTitle(pathname) {
 export default function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [logoutCountdown, setLogoutCountdown] = useState(4);
     const navigate = useNavigate();
     const location = useLocation();
     const pageTitle = getPageTitle(location.pathname);
@@ -80,6 +83,23 @@ export default function AdminLayout() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    useEffect(() => {
+        if (!showLogoutConfirm) return undefined;
+        setLogoutCountdown(4);
+        const id = setInterval(() => {
+            setLogoutCountdown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(id);
+                    clearAuthSession();
+                    navigate('/login');
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(id);
+    }, [showLogoutConfirm, navigate]);
+
     const mainMargin = isMobile ? 'ml-0' : (sidebarOpen ? 'ml-[280px]' : 'ml-[88px]');
 
     return (
@@ -101,14 +121,6 @@ export default function AdminLayout() {
                     </h2>
                 </div>
                 <div className="flex items-center space-x-2 md:space-x-6">
-                    <div className="relative hidden md:block">
-                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="pl-10 pr-4 py-2 rounded-full bg-gray-100 border-none focus:ring-2 focus:ring-[#0B3D59]/20 w-48 lg:w-64 text-sm"
-                        />
-                    </div>
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#0B3D59] text-white flex items-center justify-center font-bold text-sm md:text-base">
                         A
                     </div>
@@ -120,6 +132,7 @@ export default function AdminLayout() {
                 setSidebarOpen={setSidebarOpen}
                 isMobile={isMobile}
                 onLogout={clearAuthSession}
+                onLogoutRequest={() => setShowLogoutConfirm(true)}
             />
 
             <div className={`flex-1 transition-all duration-300 pt-20 ${mainMargin}`}>
@@ -127,6 +140,36 @@ export default function AdminLayout() {
                     <Outlet />
                 </main>
             </div>
+
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6">
+                        <h3 className="text-lg font-bold text-gray-800">Confirm Logout</h3>
+                        <p className="text-sm text-gray-600 mt-2">
+                            You will be logged out automatically in <span className="font-bold text-[#0B3D59]">{logoutCountdown}s</span>.
+                        </p>
+                        <div className="mt-5 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50"
+                            >
+                                Stay Logged In
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    clearAuthSession();
+                                    navigate('/login');
+                                }}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+                            >
+                                Logout Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

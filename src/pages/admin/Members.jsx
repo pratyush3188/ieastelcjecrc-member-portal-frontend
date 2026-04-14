@@ -229,7 +229,8 @@ function MemberDetailModal({ data, onClose, onApplicationUpdated }) {
 
 export default function Members() {
     const [members, setMembers] = useState([]);
-    const [filters, setFilters] = useState({ search: '', type: 'all', passport: 'all' });
+    const [filters, setFilters] = useState({ search: '', type: 'all', passport: 'all', status: 'approved' });
+    const [sort, setSort] = useState({ field: 'joined', order: 'desc' });
     const [selectedMemberDetail, setSelectedMemberDetail] = useState(null);
     const [memberDetailLoading, setMemberDetailLoading] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -254,13 +255,13 @@ export default function Members() {
         loadMembers();
     }, []);
 
-    const approvedOnly = members.filter((m) => (m.status || '') === 'Approved');
     const normalizedSearch = (filters.search || '').trim().toLowerCase();
-    const filteredMembers = approvedOnly.filter((m) => {
+    const filteredMembers = members.filter((m) => {
         const matchesSearch =
             !normalizedSearch ||
             [m.fullName, m.registrationNumber, m.email, m.whatsappNumber].filter(Boolean).some((v) => v.toLowerCase().includes(normalizedSearch));
         if (!matchesSearch) return false;
+        if (filters.status !== 'all' && (m.status || '').toLowerCase() !== filters.status) return false;
         if (filters.type !== 'all' && (m.memberType || '') !== filters.type) return false;
         if (filters.passport === 'yes' && m.hasPassport !== 'yes') return false;
         if (filters.passport === 'no' && m.hasPassport !== 'no') return false;
@@ -268,6 +269,22 @@ export default function Members() {
     });
 
     const handleFilterChange = (field, value) => setFilters((prev) => ({ ...prev, [field]: value }));
+    const handleSortChange = (field, order) => setSort({ field, order });
+
+    const sortedMembers = [...filteredMembers].sort((a, b) => {
+        const direction = sort.order === 'asc' ? 1 : -1;
+        const safe = (v) => (v || '').toString().toLowerCase();
+
+        if (sort.field === 'joined') {
+            const av = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bv = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return (av - bv) * direction;
+        }
+        if (sort.field === 'name') return safe(a.fullName).localeCompare(safe(b.fullName)) * direction;
+        if (sort.field === 'registration') return safe(a.registrationNumber).localeCompare(safe(b.registrationNumber)) * direction;
+        if (sort.field === 'type') return safe(a.memberType).localeCompare(safe(b.memberType)) * direction;
+        return 0;
+    });
 
     const openMemberDetail = (member) => {
         setMemberDetailLoading(true);
@@ -282,15 +299,23 @@ export default function Members() {
         <>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h3 className="text-xl font-bold text-gray-800">Members Directory</h3>
-                    <button
-                        type="button"
-                        onClick={loadMembers}
-                        disabled={loading}
-                        className="px-4 py-2 rounded-lg border border-[#0B3D59] text-[#0B3D59] text-sm font-semibold hover:bg-[#0B3D59] hover:text-white disabled:opacity-60 transition-colors"
-                    >
-                        {loading ? 'Loading...' : 'Refresh'}
-                    </button>
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-800">Members Directory</h3>
+                        <p className="text-sm text-gray-500 mt-1">Approved members list with profile and application progress.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="px-3 py-1.5 rounded-full bg-blue-50 text-[#0B3D59] text-xs font-bold">
+                            Total: {sortedMembers.length}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={loadMembers}
+                            disabled={loading}
+                            className="px-4 py-2 rounded-lg border border-[#0B3D59] text-[#0B3D59] text-sm font-semibold hover:bg-[#0B3D59] hover:text-white disabled:opacity-60 transition-colors"
+                        >
+                            {loading ? 'Loading...' : 'Refresh'}
+                        </button>
+                    </div>
                 </div>
                 {loadError && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{loadError}</div>
@@ -311,6 +336,18 @@ export default function Members() {
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Status</label>
+                                <select
+                                    value={filters.status}
+                                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                                    className="w-full md:w-40 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                                >
+                                    <option value="approved">Approved</option>
+                                    <option value="blocklisted">Blocklisted</option>
+                                    <option value="all">All</option>
+                                </select>
+                            </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Membership Type</label>
                                 <select
@@ -335,17 +372,43 @@ export default function Members() {
                                     <option value="no">No</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Sort By</label>
+                                <select
+                                    value={sort.field}
+                                    onChange={(e) => handleSortChange(e.target.value, sort.order)}
+                                    className="w-full md:w-44 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                                >
+                                    <option value="joined">Joined Date</option>
+                                    <option value="name">Full Name</option>
+                                    <option value="registration">Registration No.</option>
+                                    <option value="type">Membership Type</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Order</label>
+                                <select
+                                    value={sort.order}
+                                    onChange={(e) => handleSortChange(sort.field, e.target.value)}
+                                    className="w-full md:w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                                >
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left min-w-[1000px]">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">S.No.</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Full Name</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Registration/Roll No.</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Email</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Membership Type</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Passport</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Joined</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Actions</th>
                                 </tr>
@@ -353,20 +416,34 @@ export default function Members() {
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">Loading members...</td>
+                                        <td colSpan="9" className="px-6 py-12 text-center text-gray-500">Loading members...</td>
                                     </tr>
-                                ) : filteredMembers.map((member) => {
+                                ) : sortedMembers.map((member, index) => {
                                     const createdAt = member.createdAt ? new Date(member.createdAt) : null;
                                     const dateStr = createdAt ? createdAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
                                     const timeStr = createdAt ? createdAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
                                     return (
                                         <tr key={member._id || member.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm font-semibold text-gray-600">{index + 1}</td>
                                             <td className="px-6 py-4 font-bold text-gray-800">{member.fullName}</td>
                                             <td className="px-6 py-4 text-sm text-gray-700">{member.registrationNumber}</td>
                                             <td className="px-6 py-4 text-sm text-gray-700">{member.email}</td>
                                             <td className="px-6 py-4 text-sm text-gray-700 capitalize">{member.memberType?.replace('-', ' ') || '-'}</td>
                                             <td className="px-6 py-4 text-sm text-gray-700">
                                                 {member.hasPassport === 'yes' ? 'Yes' : member.hasPassport === 'no' ? 'No' : 'Not specified'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                    member.status === 'Approved'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : member.status === 'Blocklisted'
+                                                            ? 'bg-red-100 text-red-700'
+                                                            : member.status === 'Rejected'
+                                                                ? 'bg-gray-200 text-gray-700'
+                                                                : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                    {member.status || '-'}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600">{dateStr}{timeStr ? ` • ${timeStr}` : ''}</td>
                                             <td className="px-6 py-4">
@@ -382,10 +459,10 @@ export default function Members() {
                                         </tr>
                                     );
                                 })}
-                                {!loading && filteredMembers.length === 0 && (
+                                {!loading && sortedMembers.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-8 text-center text-sm text-gray-500">
-                                            No approved members yet. Approve members from the Approve Members page.
+                                        <td colSpan="9" className="px-6 py-8 text-center text-sm text-gray-500">
+                                            No members found for selected filters.
                                         </td>
                                     </tr>
                                 )}

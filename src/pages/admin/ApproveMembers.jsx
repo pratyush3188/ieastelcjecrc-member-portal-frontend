@@ -289,6 +289,14 @@ export default function ApproveMembers() {
                                                 >
                                                     <CancelIcon fontSize="small" />
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex items-center justify-center px-2.5 h-8 rounded-full bg-gray-800 text-white hover:bg-gray-900 text-[10px] font-bold uppercase tracking-wide"
+                                                    title="Blocklist"
+                                                    onClick={() => updateMemberStatus(member._id || member.id, 'Blocklisted')}
+                                                >
+                                                    Block
+                                                </button>
                                             </td>
                                         </tr>
                                     );

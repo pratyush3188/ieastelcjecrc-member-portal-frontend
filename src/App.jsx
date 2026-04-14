@@ -12,6 +12,7 @@ import Applications from './pages/admin/Applications';
 import Members from './pages/admin/Members';
 import Notifications from './pages/admin/Notifications';
 import Settings from './pages/admin/Settings';
+import RecentActivity from './pages/admin/RecentActivity';
 
 const App = () => {
     return (
@@ -33,6 +34,7 @@ const App = () => {
                     <Route path="applications" element={<Applications />} />
                     <Route path="members" element={<Members />} />
                     <Route path="notifications" element={<Notifications />} />
+                    <Route path="recent-activity" element={<RecentActivity />} />
                     <Route path="settings" element={<Settings />} />
                 </Route>
                 {/* Fallback */}

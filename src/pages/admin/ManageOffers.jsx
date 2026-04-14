@@ -34,12 +34,15 @@ export default function ManageOffers() {
     const [selectedPdfFile, setSelectedPdfFile] = useState(null);
     const [newOffer, setNewOffer] = useState({
         offerNumber: '',
+        offerType: 'Global Offer',
         company: '',
         position: '',
         country: '',
+        flag: '',
         duration: '',
         stipend: '',
         field: '',
+        discipline: '',
         deadline: '',
         urgent: false,
         deadlineNearby: false,
@@ -69,7 +72,9 @@ export default function ManageOffers() {
         const deadline = offer.deadline || '';
         const matchesSearch =
             !normalizedSearch ||
-            [offer.offerNumber, offer.company, offer.position, offer.country, offer.field].filter(Boolean).some((v) => v.toLowerCase().includes(normalizedSearch));
+            [offer.offerNumber, offer.offerType, offer.company, offer.position, offer.country, offer.field, offer.discipline]
+                .filter(Boolean)
+                .some((v) => v.toLowerCase().includes(normalizedSearch));
         if (!matchesSearch) return false;
         if (offerFromDate && deadline < offerFromDate) return false;
         if (offerToDate && deadline > offerToDate) return false;
@@ -81,8 +86,21 @@ export default function ManageOffers() {
         setEditingOfferId(null);
         setSelectedPdfFile(null);
         setNewOffer({
-            offerNumber: '', company: '', position: '', country: '', duration: '', stipend: '', field: '', deadline: '',
-            urgent: false,deadlineNearby: false, description: '', requirements: '',
+            offerNumber: '',
+            offerType: 'Global Offer',
+            company: '',
+            position: '',
+            country: '',
+            flag: '',
+            duration: '',
+            stipend: '',
+            field: '',
+            discipline: '',
+            deadline: '',
+            urgent: false,
+            deadlineNearby: false,
+            description: '',
+            requirements: '',
         });
         setShowAddOfferModal(true);
     };
@@ -92,12 +110,15 @@ export default function ManageOffers() {
         setSelectedPdfFile(null);
         setNewOffer({
             offerNumber: offer.offerNumber || '',
+            offerType: offer.offerType || 'Global Offer',
             company: offer.company || '',
             position: offer.position || '',
             country: offer.country || '',
+            flag: offer.flag || '',
             duration: offer.duration || '',
             stipend: offer.stipend || '',
             field: offer.field || '',
+            discipline: offer.discipline || '',
             deadline: offer.deadline || '',
             urgent: !!offer.urgent,
             deadlineNearby: !!offer.deadlineNearby,
@@ -128,8 +149,21 @@ export default function ManageOffers() {
             setEditingOfferId(null);
             setSelectedPdfFile(null);
             setNewOffer({
-                offerNumber: '', company: '', position: '', country: '', duration: '', stipend: '', field: '', deadline: '',
-                urgent: false,deadlineNearby: false, description: '', requirements: '',
+                offerNumber: '',
+                offerType: 'Global Offer',
+                company: '',
+                position: '',
+                country: '',
+                flag: '',
+                duration: '',
+                stipend: '',
+                field: '',
+                discipline: '',
+                deadline: '',
+                urgent: false,
+                deadlineNearby: false,
+                description: '',
+                requirements: '',
             });
         };
         run().catch((err) => {
@@ -161,8 +195,21 @@ export default function ManageOffers() {
         setEditingOfferId(null);
         setSelectedPdfFile(null);
         setNewOffer({
-            offerNumber: '', company: '', position: '', country: '', duration: '', stipend: '', field: '', deadline: '',
-            urgent: false, deadlineNearby: false, description: '', requirements: '',
+            offerNumber: '',
+            offerType: 'Global Offer',
+            company: '',
+            position: '',
+            country: '',
+            flag: '',
+            duration: '',
+            stipend: '',
+            field: '',
+            discipline: '',
+            deadline: '',
+            urgent: false,
+            deadlineNearby: false,
+            description: '',
+            requirements: '',
         });
     };
 
@@ -221,7 +268,8 @@ export default function ManageOffers() {
                         <table className="w-full text-left min-w-[800px]">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Employer/Role</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Type</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Company/Role</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Location</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Applicants</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
@@ -231,6 +279,11 @@ export default function ManageOffers() {
                             <tbody className="divide-y divide-gray-100">
                                 {filteredOffers.map((offer) => (
                                     <tr key={offer._id || offer.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4">
+                                            <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
+                                                {offer.offerType || 'Global Offer'}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center">
                                                 <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-xl mr-3 text-[#0B3D59]">
@@ -264,7 +317,7 @@ export default function ManageOffers() {
                                 ))}
                                 {filteredOffers.length === 0 && (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-500">No offers found.</td>
+                                        <td colSpan="6" className="px-6 py-8 text-center text-sm text-gray-500">No offers found.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -297,6 +350,18 @@ export default function ManageOffers() {
                                     onChange={(e) => setNewOffer({ ...newOffer, offerNumber: e.target.value })}
                                     placeholder="e.g. DE-2024-1234"
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">Type of Offer</label>
+                                <select
+                                    value={newOffer.offerType}
+                                    onChange={(e) => setNewOffer({ ...newOffer, offerType: e.target.value })}
+                                    className="w-full border border-gray-200 rounded-lg p-3 bg-white focus:ring-2 focus:ring-[#0B3D59] outline-none"
+                                >
+                                    <option value="Exchange Offer">Exchange Offer</option>
+                                    <option value="Global Offer">Global Offer</option>
+                                    <option value="Reserved Offer">Reserved Offer</option>
+                                </select>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
@@ -369,16 +434,27 @@ export default function ManageOffers() {
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">Fields/Disciplines</label>
-                                <input
-                                    required
-                                    type="text"
-                                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-[#0B3D59] outline-none"
-                                    value={newOffer.field}
-                                    onChange={(e) => setNewOffer({ ...newOffer, field: e.target.value })}
-                                    placeholder="e.g. Computer Science"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700">Field (optional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-[#0B3D59] outline-none"
+                                        value={newOffer.field}
+                                        onChange={(e) => setNewOffer({ ...newOffer, field: e.target.value })}
+                                        placeholder="e.g. Engineering"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700">Discipline (optional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-[#0B3D59] outline-none"
+                                        value={newOffer.discipline}
+                                        onChange={(e) => setNewOffer({ ...newOffer, discipline: e.target.value })}
+                                        placeholder="e.g. Computer Science"
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-700">Description</label>
