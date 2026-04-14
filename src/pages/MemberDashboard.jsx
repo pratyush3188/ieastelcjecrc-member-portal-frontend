@@ -30,7 +30,8 @@ import {
     PictureAsPdf as PdfIcon,
     Info as InfoIcon,
     Article as ArticleIcon,
-    CalendarMonth as CalendarIcon
+    CalendarMonth as CalendarIcon,
+    CurrencyExchange as CurrencyIcon
 } from '@mui/icons-material';
 import {
     Chart as ChartJS,
@@ -51,7 +52,7 @@ import { apiFetch, clearAuthSession, getAuthToken, API_BASE_URL } from '../utils
 // Register ChartJS
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
-const MEMBER_TABS = ['dashboard', 'offers', 'applications', 'nomination', 'notifications', 'documents', 'saved', 'profile', 'settings'];
+const MEMBER_TABS = ['dashboard', 'offers', 'applications', 'nomination', 'notifications', 'documents', 'saved', 'profile', 'settings', 'currency-converter'];
 
 const OFFER_CATEGORIES = ['all', 'CS & IT', 'Mech', 'Civil', 'Elec', 'Electronics', 'Eco', 'Mgmt', 'Bio/Chem', 'Other'];
 
@@ -1409,6 +1410,203 @@ export default function MemberDashboard() {
         );
     };
 
+    const CurrencyConverterView = () => {
+        const [amount, setAmount] = useState(1);
+        const [fromCurrency, setFromCurrency] = useState('USD');
+        const [toCurrency, setToCurrency] = useState('INR');
+        const [rates, setRates] = useState({});
+        const [loading, setLoading] = useState(true);
+        const [result, setResult] = useState(null);
+        const [lastUpdated, setLastUpdated] = useState(null);
+
+        const currencies = [
+            { code: 'USD', name: 'US Dollar', symbol: '$' },
+            { code: 'EUR', name: 'Euro', symbol: '€' },
+            { code: 'GBP', name: 'British Pound', symbol: '£' },
+            { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+            { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+            { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+            { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+            { code: 'PLN', name: 'Polish Zloty', symbol: 'zł' },
+            { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
+        ];
+
+        useEffect(() => {
+            const fetchRates = async () => {
+                try {
+                    setLoading(true);
+                    const apiKey = import.meta.env.VITE_CURRENCY_API_KEY;
+                    const response = await fetch(`https://api.exchangeratesapi.io/v1/latest?access_key=${apiKey}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        setRates(data.rates);
+                        setLastUpdated(new Date(data.timestamp * 1000).toLocaleString());
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch exchange rates:', error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchRates();
+        }, []);
+
+        useEffect(() => {
+            if (rates[fromCurrency] && rates[toCurrency]) {
+                // Since EUR is the base, we convert fromCurrency to EUR, then EUR to toCurrency
+                const amountInEur = amount / rates[fromCurrency];
+                const convertedAmount = amountInEur * rates[toCurrency];
+                setResult(convertedAmount.toFixed(2));
+            }
+        }, [amount, fromCurrency, toCurrency, rates]);
+
+        const swapCurrencies = () => {
+            const currentAmount = amount;
+            const currentResult = result;
+            setFromCurrency(toCurrency);
+            setToCurrency(fromCurrency);
+            if (currentResult && !isNaN(currentResult)) {
+                setAmount(parseFloat(currentResult));
+            }
+        };
+
+        return (
+            <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+                <div className="text-center space-y-2">
+                    <h3 className="text-3xl font-bold text-gray-800">Currency Converter</h3>
+                    <p className="text-gray-500">Plan your international internship expenses with real-time rates.</p>
+                </div>
+
+                <div className="bg-white/70 backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-2xl border border-white/20 relative overflow-hidden">
+                    {/* Decorative Elements */}
+                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#003366]/5 rounded-full blur-3xl" />
+                    <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#D62828]/5 rounded-full blur-3xl" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-8 items-center relative z-10">
+                        {/* From Section */}
+                        <div className="space-y-4">
+                            <label className="text-sm font-bold text-gray-400 uppercase tracking-widest ml-1">Amount</label>
+                            <div className="relative group">
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                                    className="w-full bg-gray-50/50 border-2 border-gray-100 p-5 rounded-2xl text-2xl font-bold text-gray-800 focus:ring-4 focus:ring-[#003366]/10 focus:border-[#003366] transition-all outline-none"
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-white px-3 py-1 rounded-lg shadow-sm border border-gray-100 text-[#003366] font-bold">
+                                    {currencies.find(c => c.code === fromCurrency)?.symbol}
+                                </div>
+                            </div>
+                            <select
+                                value={fromCurrency}
+                                onChange={(e) => setFromCurrency(e.target.value)}
+                                className="w-full bg-white border-2 border-gray-100 p-4 rounded-2xl font-semibold text-gray-700 focus:ring-4 focus:ring-[#003366]/10 focus:border-[#003366] transition-all outline-none cursor-pointer"
+                            >
+                                {currencies.map(c => (
+                                    <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Swap Button */}
+                        <div className="flex justify-center">
+                            <motion.button
+                                whileHover={{ scale: 1.1, rotate: 180 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={swapCurrencies}
+                                className="bg-[#003366] text-white p-4 rounded-2xl shadow-lg shadow-blue-900/30 hover:bg-[#004080] transition-colors"
+                            >
+                                <CurrencyIcon />
+                            </motion.button>
+                        </div>
+
+                        {/* To Section */}
+                        <div className="space-y-4">
+                            <label className="text-sm font-bold text-gray-400 uppercase tracking-widest ml-1">Converted Value</label>
+                            <div className="relative">
+                                <div className="w-full bg-blue-50/50 border-2 border-blue-100/50 p-5 rounded-2xl text-2xl font-bold text-[#003366] flex items-center min-h-[76px]">
+                                    {loading ? (
+                                        <div className="h-8 w-32 bg-gray-200 animate-pulse rounded" />
+                                    ) : (
+                                        <span>{result}</span>
+                                    )}
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-white px-3 py-1 rounded-lg shadow-sm border border-gray-100 text-[#003366] font-bold">
+                                        {currencies.find(c => c.code === toCurrency)?.symbol}
+                                    </div>
+                                </div>
+                            </div>
+                            <select
+                                value={toCurrency}
+                                onChange={(e) => setToCurrency(e.target.value)}
+                                className="w-full bg-white border-2 border-gray-100 p-4 rounded-2xl font-semibold text-gray-700 focus:ring-4 focus:ring-[#003366]/10 focus:border-[#003366] transition-all outline-none cursor-pointer"
+                            >
+                                {currencies.map(c => (
+                                    <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Result Summary */}
+                    {!loading && result && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="mt-12 p-8 bg-gradient-to-br from-[#003366] to-[#005a8f] rounded-[2.5rem] text-white text-center shadow-xl shadow-blue-900/20 border border-white/10"
+                        >
+                            <p className="text-blue-200 text-sm font-semibold uppercase tracking-widest mb-3">Total Conversion</p>
+                            <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-6">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-3xl md:text-4xl font-bold">{amount}</span>
+                                    <span className="text-blue-200 text-xs font-bold uppercase mt-1">{fromCurrency}</span>
+                                </div>
+                                <div className="text-4xl md:text-5xl opacity-40 hidden md:block">=</div>
+                                <div className="text-2xl md:text-3xl opacity-40 md:hidden">↓</div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-200">
+                                        {result}
+                                    </span>
+                                    <span className="text-blue-200 text-xs font-bold uppercase mt-1">{toCurrency}</span>
+                                </div>
+                            </div>
+                            <div className="h-px bg-white/10 w-1/2 mx-auto mb-4" />
+                            <p className="text-sm text-blue-300">
+                                1 {fromCurrency} = {(result / (amount || 1)).toFixed(4)} {toCurrency}
+                            </p>
+                            {lastUpdated && (
+                                <p className="text-[10px] text-blue-400/60 mt-4 uppercase tracking-[0.2em]">
+                                    Market Rates as of {lastUpdated}
+                                </p>
+                            )}
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* Info Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-start space-x-4">
+                        <div className="p-3 rounded-xl bg-orange-100 text-orange-600">
+                            <InfoIcon />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-gray-800">Smart Planning</h4>
+                            <p className="text-sm text-gray-500 mt-1">Convert your stipend to your local currency to better understand your savings potential.</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-start space-x-4">
+                        <div className="p-3 rounded-xl bg-green-100 text-green-600">
+                            <CheckCircleIcon />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-gray-800">Market Rates</h4>
+                            <p className="text-sm text-gray-500 mt-1">We use mid-market exchange rates to give you a transparent estimation of your conversion.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // --- Main Render ---
 
     // Calculate main margin based on sidebar state
@@ -1488,6 +1686,7 @@ export default function MemberDashboard() {
                     {renderNavButton("documents", <DocumentsIcon />, "Documents")}
                     {/* Analytics removed */}
                     {renderNavButton("saved", <BookmarkIcon />, "Saved Offers")}
+                    {renderNavButton("currency-converter", <CurrencyIcon />, "Currency Converter")}
                 </div>
                 <div className="p-3 border-t border-gray-100 space-y-1 bg-gray-50/50">
                     {renderNavButton("settings", <SettingsIcon />, "Settings")}
@@ -1521,7 +1720,8 @@ export default function MemberDashboard() {
                             {activeTab === 'settings' && <SettingsView />}
                             {activeTab === 'notifications' && <NotificationsListView />}
                             {activeTab === 'documents' && <DocumentsView />}
-                            {activeTab !== 'dashboard' && activeTab !== 'offers' && activeTab !== 'applications' && activeTab !== 'profile' && activeTab !== 'settings' && activeTab !== 'notifications' && activeTab !== 'documents' && (
+                            {activeTab === 'currency-converter' && <CurrencyConverterView />}
+                            {activeTab !== 'dashboard' && activeTab !== 'offers' && activeTab !== 'applications' && activeTab !== 'profile' && activeTab !== 'settings' && activeTab !== 'notifications' && activeTab !== 'documents' && activeTab !== 'currency-converter' && (
                                 <div className="flex items-center justify-center h-96 text-gray-400">
                                     <div className="text-center">
                                         <NominationIcon style={{ fontSize: 64, opacity: 0.5 }} />
