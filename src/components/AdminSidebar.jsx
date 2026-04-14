@@ -11,7 +11,8 @@ import {
     CheckCircle as CheckCircleIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
-    Campaign as CampaignIcon
+    Campaign as CampaignIcon,
+    History as HistoryIcon
 } from '@mui/icons-material';
 
 const NAV_ITEMS = [
@@ -21,10 +22,11 @@ const NAV_ITEMS = [
     { path: '/admin-dashboard/applications', label: 'Applications', icon: ApplicationsIcon },
     { path: '/admin-dashboard/members', label: 'Members', icon: MembersIcon },
     { path: '/admin-dashboard/notifications', label: 'Notifications', icon: CampaignIcon },
+    { path: '/admin-dashboard/recent-activity', label: 'Recent Activity', icon: HistoryIcon },
     { path: '/admin-dashboard/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export default function AdminSidebar({ sidebarOpen, setSidebarOpen, isMobile, onLogout }) {
+export default function AdminSidebar({ sidebarOpen, setSidebarOpen, isMobile, onLogout, onLogoutRequest }) {
     const navigate = useNavigate();
 
     return (
@@ -92,8 +94,12 @@ export default function AdminSidebar({ sidebarOpen, setSidebarOpen, isMobile, on
                     <button
                         type="button"
                         onClick={() => {
-                            onLogout?.();
-                            navigate('/');
+                            if (onLogoutRequest) {
+                                onLogoutRequest();
+                            } else {
+                                onLogout?.();
+                                navigate('/');
+                            }
                         }}
                         className="flex items-center text-red-400 hover:text-red-300 transition-colors w-full p-2 rounded-lg hover:bg-white/5"
                     >

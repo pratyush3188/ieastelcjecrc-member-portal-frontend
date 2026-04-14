@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/Iaeste Logo Standard 2.png';
+import jecrcLogo from '../assets/logo-removebg-preview 1.png';
 
 const Navbar = ({ textDark = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,18 +22,37 @@ const Navbar = ({ textDark = false }) => {
   return (
     <nav className={`fixed w-full z-50 top-0 start-0 border-b backdrop-blur-md transition-colors duration-300 ${navBackgroundClass}`}>
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <Link to="/" className="flex items-center space-x-3 rtl:space-x-reverse group">
-          {/* Logo handling: standard logo is likely dark/colored. On dark bg, we invert it to make it white. On light bg, we keep it normal. */}
-          <img
-            src={logo}
-            className={`h-10 md:h-12 transition-transform duration-300 group-hover:scale-105 ${!textDark ? 'brightness-0 invert' : ''}`}
-            alt="IAESTE Logo"
-          />
-          <div className="flex flex-col">
-            <span className={`self-center text-xl font-bold whitespace-nowrap ${textColorClass}`}>IAESTE</span>
-            <span className={`text-[10px] tracking-widest uppercase ${subTextColorClass}`}>LC JECRC</span>
-          </div>
-        </Link>
+        <div className="flex items-center space-x-3 rtl:space-x-reverse">
+          <Link to="/" className="flex items-center space-x-3 rtl:space-x-reverse group">
+            {/* Logo handling: standard logo is likely dark/colored. On dark bg, we invert it to make it white. On light bg, we keep it normal. */}
+            <img
+              src={logo}
+              className={`h-10 md:h-12 transition-transform duration-300 group-hover:scale-105 ${!textDark ? 'brightness-0 invert' : ''}`}
+              alt="IAESTE Logo"
+            />
+            <div className="flex flex-col">
+              <span className={`self-center text-xl font-bold whitespace-nowrap ${textColorClass}`}>IAESTE</span>
+              <span className={`text-[10px] tracking-widest uppercase ${subTextColorClass}`}>LC JECRC</span>
+            </div>
+          </Link>
+
+          <span className={`hidden sm:block h-10 w-px ${textDark ? 'bg-gray-200' : 'bg-white/20'}`} />
+
+          <a
+            href="https://jecrcuniversity.edu.in/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center group"
+            aria-label="JECRC University (opens in new tab)"
+            title="JECRC University"
+          >
+            <img
+              src={jecrcLogo}
+              className="h-9 md:h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              alt="JECRC Logo"
+            />
+          </a>
+        </div>
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
           <Link to="/membership" className="text-white bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm px-6 py-2.5 text-center transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer">
             Avail Membership

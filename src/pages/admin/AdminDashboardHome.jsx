@@ -44,6 +44,7 @@ function StatCard({ title, value, icon, color, change }) {
 export default function AdminDashboardHome() {
     const [offers, setOffers] = useState([]);
     const [members, setMembers] = useState([]);
+    const [activities, setActivities] = useState([]);
     const [summary, setSummary] = useState({
         totalOffers: 0,
         totalApplicants: 0,
@@ -55,14 +56,16 @@ export default function AdminDashboardHome() {
     useEffect(() => {
         const load = async () => {
             try {
-                const [sum, offersRes, membershipsRes] = await Promise.all([
+                const [sum, offersRes, membershipsRes, activitiesRes] = await Promise.all([
                     apiFetch('/api/admin/summary'),
                     apiFetch('/api/admin/offers'),
                     apiFetch('/api/admin/memberships'),
+                    apiFetch('/api/admin/activities?limit=5'),
                 ]);
                 setSummary(sum || {});
                 setOffers(offersRes?.offers || []);
                 setMembers(membershipsRes?.memberships || []);
+                setActivities(activitiesRes?.activities || []);
             } catch (e) {
                 console.error('Failed to load dashboard', e);
             }
@@ -120,16 +123,18 @@ export default function AdminDashboardHome() {
                 <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Recent Activities</h3>
                     <div className="space-y-4">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="flex items-start p-3 bg-gray-50 rounded-lg">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0B3D59] font-bold mr-3 text-xs">
-                                    {i % 2 === 0 ? 'APP' : 'USR'}
+                        {activities.length === 0 ? (
+                            <p className="text-sm text-gray-500">No recent activity.</p>
+                        ) : activities.map((a) => (
+                            <div key={a._id} className="flex items-start p-3 bg-gray-50 rounded-lg">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0B3D59] font-bold mr-3 text-[10px]">
+                                    ADM
                                 </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">
-                                        {i % 2 === 0 ? 'New Application Received' : 'New Member Registered'}
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 break-words">{a.description || a.action}</p>
+                                    <p className="text-xs text-gray-500">
+                                        {a.createdAt ? new Date(a.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
                                     </p>
-                                    <p className="text-xs text-gray-500">2 hours ago</p>
                                 </div>
                             </div>
                         ))}

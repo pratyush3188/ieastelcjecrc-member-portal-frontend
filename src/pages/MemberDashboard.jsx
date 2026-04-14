@@ -12,7 +12,6 @@ import {
     Person as ProfileIcon,
     Settings as SettingsIcon,
     Logout as LogoutIcon,
-    Search as SearchIcon,
     CheckCircle as CheckCircleIcon,
     AccessTime as TimeIcon,
     LocationOn as LocationIcon,
@@ -47,7 +46,7 @@ import {
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
 import logo from '../assets/Iaeste Logo Standard 2.png';
-import { apiFetch, clearAuthSession, getAuthToken, API_BASE_URL } from '../utils/api';
+import { apiFetch, apiUploadMemberDocuments, clearAuthSession, getAuthToken, API_BASE_URL } from '../utils/api';
 
 // Register ChartJS
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -93,6 +92,8 @@ export default function MemberDashboard() {
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [filterField, setFilterField] = useState('all');
     const [offerSearch, setOfferSearch] = useState('');
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [logoutCountdown, setLogoutCountdown] = useState(4);
 
     const navigate = useNavigate();
     const { tab: urlTab } = useParams();
@@ -217,6 +218,26 @@ export default function MemberDashboard() {
         navigate('/');
     };
 
+    const requestLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    useEffect(() => {
+        if (!showLogoutConfirm) return undefined;
+        setLogoutCountdown(4);
+        const id = setInterval(() => {
+            setLogoutCountdown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(id);
+                    handleLogout();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(id);
+    }, [showLogoutConfirm]);
+
     // --- Render helpers (called as functions, NOT as <Component /> to avoid remount) ---
 
     const showLabel = isMobile || sidebarOpen;
@@ -292,12 +313,6 @@ export default function MemberDashboard() {
                 </h2>
             </div>
             <div className="flex items-center space-x-2 md:space-x-6">
-                <div className="relative hidden md:block">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <SearchIcon className="text-gray-400" />
-                    </div>
-                    <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 rounded-full bg-gray-100 border-none focus:ring-2 focus:ring-[#003366]/20 transition-all w-48 lg:w-64" />
-                </div>
                 <div
                     className="relative cursor-pointer"
                     onClick={() => { setActiveTab('notifications'); navigate('/dashboard/notifications'); }}
@@ -374,7 +389,7 @@ export default function MemberDashboard() {
                                             type="button"
                                             onClick={() => {
                                                 setProfileDropdownOpen(false);
-                                                handleLogout();
+                                                requestLogout();
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                         >
@@ -663,94 +678,95 @@ export default function MemberDashboard() {
     };
 
     const OffersView = () => (
-    <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {offers.map(offer => {
-                const offerId = offer._id || offer.id;
-                const isSaved = savedOfferIds.includes(offerId);
-                const isApplied = applications.some(app => (app.offerId?.toString?.() || app.offerId) === offerId || app.offer?._id === offerId);
-                return (
-                    <motion.div
-                        key={offerId}
-                        whileHover={{ y: -5, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}
-                        className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative group cursor-pointer flex flex-col h-full"
-                        onClick={() => setSelectedOffer(offer)}
-                    >
-                        {/* Status Tags */}
-                        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
-                            <div className="flex gap-2">
-                                {isApplied && (
-                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                                        APPLIED
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(Array.isArray(offers) ? offers : []).map((offer) => {
+                    const offerId = offer._id || offer.id;
+                    const isSaved = savedOfferIds.includes(offerId);
+                    const isApplied = applications.some(app => (app.offerId?.toString?.() || app.offerId) === offerId || app.offer?._id === offerId);
+
+                    return (
+                        <motion.div
+                            key={offerId}
+                            whileHover={{ y: -5, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}
+                            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative group cursor-pointer flex flex-col h-full"
+                            onClick={() => setSelectedOffer(offer)}
+                        >
+                            {/* Status Tags */}
+                            <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+                                <div className="flex gap-2">
+                                    {isApplied && (
+                                        <span className="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full">
+                                            APPLIED
+                                        </span>
+                                    )}
+                                </div>
+                                {offer.urgent && (
+                                    <span className="bg-[#D62828]/10 text-[#D62828] text-[10px] font-bold px-3 py-1 rounded-full">
+                                        DEADLINE APPROACHING
                                     </span>
                                 )}
                             </div>
-                            {offer.urgent && (
-                                <span className="bg-[#D62828]/10 text-[#D62828] text-[10px] font-bold px-3 py-1 rounded-full">
-                                    DEADLINE APPROACHING
-                                </span>
-                            )}
-                        </div>
 
-                        {/* Company Header */}
-                        <div className="flex items-center mb-4">
-                            <span className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#003366] text-2xl mr-4 shadow-sm border border-blue-100/50">
-                                <OffersIcon fontSize="inherit" />
-                            </span>
-                            <div>
-                                <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors">
-                                    {offer.offerNumber || offer.company}
-                                </h3>
-                                <p className="text-sm text-gray-500">{offer.country}</p>
+                            {/* Company Header */}
+                            <div className="flex items-center mb-4">
+                                <span className="text-4xl mr-4">{offer.flag || '🌐'}</span>
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors">
+                                        {offer.offerNumber || offer.company}
+                                    </h3>
+                                    <p className="text-sm text-gray-500">{offer.country}</p>
+                                    <p className="text-xs mt-1">
+                                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
+                                            {offer.offerType || 'Global Offer'}
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Details */}
-                        <div className="space-y-3 mb-6 flex-1">
-                            <h4 className="font-semibold text-gray-700 min-h-[48px] leading-snug line-clamp-2">{offer.position}</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="flex items-center text-xs text-gray-600">
+                            {/* Details */}
+                            <div className="space-y-3 mb-6 flex-1">
+                                <h4 className="font-semibold text-gray-700 min-h-[48px] leading-snug line-clamp-2">{offer.position}</h4>
+                                <div className="flex items-center text-sm text-gray-600">
                                     <TimeIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.duration}
                                 </div>
-                                <div className="flex items-center text-xs text-gray-600">
+                                <div className="flex items-center text-sm text-gray-600">
                                     <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
                                 </div>
-                                <div className="flex items-center text-xs text-gray-600 truncate">
-                                    <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {[offer.field, offer.discipline].filter(Boolean).join(' / ') || '-'}
                                 </div>
                                 <div className="flex items-center text-xs font-bold text-[#D62828]">
                                     <CalendarIcon className="w-4 h-4 mr-2 text-[#D62828]/60" /> {offer.deadline}
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Actions */}
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${
-                                    isSaved
+                            {/* Actions */}
+                            <div className="flex gap-2 mt-auto">
+                                <button
+                                    type="button"
+                                    className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${isSaved
                                         ? 'bg-[#003366] text-white border-[#003366]'
                                         : 'bg-[#F4F6F8] text-[#003366] border-gray-200 hover:bg-[#003366] hover:text-white'
-                                }`}
-                                onClick={(e) => { e.stopPropagation(); toggleSaveOffer(offerId); }}
-                            >
-                                {isSaved ? 'Saved' : 'Save'}
-                            </button>
-                            <button
-                                type="button"
-                                className="flex-1 py-2 rounded-lg bg-[#F4F6F8] text-[#003366] font-semibold hover:bg-[#003366] hover:text-white transition-all text-xs"
-                                onClick={() => setSelectedOffer(offer)}
-                            >
-                                View Details
-                            </button>
-                        </div>
-                    </motion.div>
-                );
-            })}
+                                    }`}
+                                    onClick={(e) => { e.stopPropagation(); toggleSaveOffer(offerId); }}
+                                >
+                                    {isSaved ? 'Saved' : 'Save'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex-1 py-2 rounded-lg bg-[#F4F6F8] text-[#003366] font-semibold hover:bg-[#003366] hover:text-white transition-all text-xs"
+                                    onClick={() => setSelectedOffer(offer)}
+                                >
+                                    View Details
+                                </button>
+                            </div>
+                        </motion.div>
+                    );
+                })}
+            </div>
         </div>
-    </div>
-);
+    );
     
 
     const SavedOffersView = () => {
@@ -809,12 +825,15 @@ export default function MemberDashboard() {
                                     )}
                                 </div>
                                 <div className="flex items-center mb-4">
-                                    <span className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#003366] text-2xl mr-4 shadow-sm border border-blue-100/50">
-                                        <OffersIcon fontSize="inherit" />
-                                    </span>
+                                    <span className="text-4xl mr-4">{offer.flag || '🌐'}</span>
                                     <div>
                                         <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#003366] transition-colors">{offer.offerNumber || offer.company}</h3>
                                         <p className="text-sm text-gray-500">{offer.country}</p>
+                                        <p className="text-xs mt-1">
+                                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
+                                                {offer.offerType || 'Global Offer'}
+                                            </span>
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="space-y-3 mb-6 flex-1">
@@ -826,10 +845,10 @@ export default function MemberDashboard() {
                                         <StipendIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.stipend}
                                     </div>
                                     <div className="flex items-center text-sm text-gray-600">
-                                        <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {offer.field}
+                                        <FieldIcon className="w-4 h-4 mr-2 text-gray-400" /> {[offer.field, offer.discipline].filter(Boolean).join(' / ') || '-'}
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mt-auto">
                                     <button
                                         type="button"
                                         className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${isSaved
@@ -1090,7 +1109,7 @@ export default function MemberDashboard() {
                                             <ul className="space-y-3">
                                                 <li className="flex items-start">
                                                     <CheckCircleIcon className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                                                    <span className="text-gray-700">Currently enrolled in {offer.field} or related degree</span>
+                                                    <span className="text-gray-700">Currently enrolled in {[offer.field, offer.discipline].filter(Boolean).join(' / ') || 'a related field'} or related degree</span>
                                                 </li>
                                                 <li className="flex items-start">
                                                     <CheckCircleIcon className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -1243,6 +1262,18 @@ export default function MemberDashboard() {
     };
 
     const DocumentsView = () => {
+        const [docFiles, setDocFiles] = useState({
+            aadhar: null,
+            pan: null,
+            passport: null,
+            marksheet10: null,
+            marksheet12: null,
+            factsheet: null,
+        });
+        const [uploading, setUploading] = useState(false);
+        const [uploadMsg, setUploadMsg] = useState('');
+        const [uploadErr, setUploadErr] = useState('');
+
         const handleDownloadPDF = (filename) => {
             const link = document.createElement('a');
             const encodedFilename = encodeURIComponent(filename);
@@ -1259,8 +1290,101 @@ export default function MemberDashboard() {
             window.open(`/documents/${encodedFilename}`, '_blank');
         };
 
+        const uploadedDocs = currentMember?.documents || {};
+        const docMeta = [
+            { key: 'aadhar', label: 'Aadhar Card' },
+            { key: 'pan', label: 'PAN Card' },
+            { key: 'passport', label: 'Passport' },
+            { key: 'marksheet10', label: '10th Marksheet' },
+            { key: 'marksheet12', label: '12th Marksheet' },
+            { key: 'factsheet', label: 'Factsheet' },
+        ];
+
+        const openDoc = (url) => {
+            if (!url) return;
+            window.open(url, '_blank');
+        };
+
+        const submitDocs = async () => {
+            setUploadMsg('');
+            setUploadErr('');
+            const any = Object.values(docFiles).some(Boolean);
+            if (!any) {
+                setUploadErr('Please select at least one document to upload.');
+                return;
+            }
+            try {
+                setUploading(true);
+                const res = await apiUploadMemberDocuments(docFiles);
+                setCurrentMember(res?.membership || currentMember);
+                setDocFiles({ aadhar: null, pan: null, passport: null, marksheet10: null, marksheet12: null, factsheet: null });
+                setUploadMsg('Documents uploaded successfully.');
+            } catch (e) {
+                setUploadErr(e?.message || 'Failed to upload documents');
+            } finally {
+                setUploading(false);
+            }
+        };
+
         return (
             <div className="space-y-8 animate-fade-in-up">
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Upload Documents</h3>
+                    <p className="text-gray-600 mb-6">Upload your documents here. You can upload one or multiple files, and re-upload anytime to replace them.</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {docMeta.map(({ key, label }) => {
+                            const existingUrl = uploadedDocs?.[key]?.url || '';
+                            return (
+                                <div key={key} className="border border-gray-200 rounded-xl p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-800">{label}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Status: {existingUrl ? <span className="text-green-700 font-semibold">Uploaded</span> : <span className="text-gray-500 font-semibold">Not uploaded</span>}
+                                            </p>
+                                        </div>
+                                        {existingUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openDoc(existingUrl)}
+                                                className="text-xs font-semibold text-[#003366] hover:underline"
+                                            >
+                                                View
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-3">
+                                        <input
+                                            type="file"
+                                            accept="application/pdf,image/png,image/jpeg"
+                                            onChange={(e) => setDocFiles((prev) => ({ ...prev, [key]: e.target.files?.[0] || null }))}
+                                            className="w-full border border-gray-200 rounded-lg p-2 text-xs file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-[#0B3D59] file:text-white file:text-xs file:font-semibold"
+                                        />
+                                        {docFiles[key] && <p className="mt-2 text-xs text-green-700">{docFiles[key].name}</p>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                        <div>
+                            {uploadErr && <p className="text-xs text-red-600 font-semibold">{uploadErr}</p>}
+                            {uploadMsg && <p className="text-xs text-green-700 font-semibold">{uploadMsg}</p>}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={submitDocs}
+                            disabled={uploading || !currentMember}
+                            className="px-6 py-3 rounded-lg bg-[#0B3D59] text-white font-bold hover:bg-[#09314a] disabled:opacity-60"
+                        >
+                            {uploading ? 'Uploading...' : 'Upload Selected Documents'}
+                        </button>
+                    </div>
+                </div>
+
                 <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">Document Guidelines</h3>
                     <p className="text-gray-600 mb-6">Follow these steps to prepare your application documents for IAESTE offers.</p>
@@ -1690,7 +1814,7 @@ export default function MemberDashboard() {
                 </div>
                 <div className="p-3 border-t border-gray-100 space-y-1 bg-gray-50/50">
                     {renderNavButton("settings", <SettingsIcon />, "Settings")}
-                    {renderNavButton("logout", <LogoutIcon />, "Logout", true, handleLogout)}
+                    {renderNavButton("logout", <LogoutIcon />, "Logout", true, requestLogout)}
                 </div>
                 {!isMobile && (
                     <button
@@ -1740,6 +1864,33 @@ export default function MemberDashboard() {
                     <OfferDetailModal offer={selectedOffer} onClose={() => setSelectedOffer(null)} />
                 )}
             </AnimatePresence>
+
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6">
+                        <h3 className="text-lg font-bold text-gray-800">Confirm Logout</h3>
+                        <p className="text-sm text-gray-600 mt-2">
+                            You will be logged out automatically in <span className="font-bold text-[#003366]">{logoutCountdown}s</span>.
+                        </p>
+                        <div className="mt-5 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50"
+                            >
+                                Stay Logged In
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+                            >
+                                Logout Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
