@@ -46,7 +46,7 @@ import {
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
 import logo from '../assets/Iaeste Logo Standard 2.png';
-import { apiFetch, clearAuthSession, getAuthToken, API_BASE_URL } from '../utils/api';
+import { apiFetch, apiUploadMemberDocuments, clearAuthSession, getAuthToken, API_BASE_URL } from '../utils/api';
 
 // Register ChartJS
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -1262,6 +1262,18 @@ export default function MemberDashboard() {
     };
 
     const DocumentsView = () => {
+        const [docFiles, setDocFiles] = useState({
+            aadhar: null,
+            pan: null,
+            passport: null,
+            marksheet10: null,
+            marksheet12: null,
+            factsheet: null,
+        });
+        const [uploading, setUploading] = useState(false);
+        const [uploadMsg, setUploadMsg] = useState('');
+        const [uploadErr, setUploadErr] = useState('');
+
         const handleDownloadPDF = (filename) => {
             const link = document.createElement('a');
             const encodedFilename = encodeURIComponent(filename);
@@ -1278,8 +1290,101 @@ export default function MemberDashboard() {
             window.open(`/documents/${encodedFilename}`, '_blank');
         };
 
+        const uploadedDocs = currentMember?.documents || {};
+        const docMeta = [
+            { key: 'aadhar', label: 'Aadhar Card' },
+            { key: 'pan', label: 'PAN Card' },
+            { key: 'passport', label: 'Passport' },
+            { key: 'marksheet10', label: '10th Marksheet' },
+            { key: 'marksheet12', label: '12th Marksheet' },
+            { key: 'factsheet', label: 'Factsheet' },
+        ];
+
+        const openDoc = (url) => {
+            if (!url) return;
+            window.open(url, '_blank');
+        };
+
+        const submitDocs = async () => {
+            setUploadMsg('');
+            setUploadErr('');
+            const any = Object.values(docFiles).some(Boolean);
+            if (!any) {
+                setUploadErr('Please select at least one document to upload.');
+                return;
+            }
+            try {
+                setUploading(true);
+                const res = await apiUploadMemberDocuments(docFiles);
+                setCurrentMember(res?.membership || currentMember);
+                setDocFiles({ aadhar: null, pan: null, passport: null, marksheet10: null, marksheet12: null, factsheet: null });
+                setUploadMsg('Documents uploaded successfully.');
+            } catch (e) {
+                setUploadErr(e?.message || 'Failed to upload documents');
+            } finally {
+                setUploading(false);
+            }
+        };
+
         return (
             <div className="space-y-8 animate-fade-in-up">
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Upload Documents</h3>
+                    <p className="text-gray-600 mb-6">Upload your documents here. You can upload one or multiple files, and re-upload anytime to replace them.</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {docMeta.map(({ key, label }) => {
+                            const existingUrl = uploadedDocs?.[key]?.url || '';
+                            return (
+                                <div key={key} className="border border-gray-200 rounded-xl p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-800">{label}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Status: {existingUrl ? <span className="text-green-700 font-semibold">Uploaded</span> : <span className="text-gray-500 font-semibold">Not uploaded</span>}
+                                            </p>
+                                        </div>
+                                        {existingUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openDoc(existingUrl)}
+                                                className="text-xs font-semibold text-[#003366] hover:underline"
+                                            >
+                                                View
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-3">
+                                        <input
+                                            type="file"
+                                            accept="application/pdf,image/png,image/jpeg"
+                                            onChange={(e) => setDocFiles((prev) => ({ ...prev, [key]: e.target.files?.[0] || null }))}
+                                            className="w-full border border-gray-200 rounded-lg p-2 text-xs file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-[#0B3D59] file:text-white file:text-xs file:font-semibold"
+                                        />
+                                        {docFiles[key] && <p className="mt-2 text-xs text-green-700">{docFiles[key].name}</p>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                        <div>
+                            {uploadErr && <p className="text-xs text-red-600 font-semibold">{uploadErr}</p>}
+                            {uploadMsg && <p className="text-xs text-green-700 font-semibold">{uploadMsg}</p>}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={submitDocs}
+                            disabled={uploading || !currentMember}
+                            className="px-6 py-3 rounded-lg bg-[#0B3D59] text-white font-bold hover:bg-[#09314a] disabled:opacity-60"
+                        >
+                            {uploading ? 'Uploading...' : 'Upload Selected Documents'}
+                        </button>
+                    </div>
+                </div>
+
                 <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">Document Guidelines</h3>
                     <p className="text-gray-600 mb-6">Follow these steps to prepare your application documents for IAESTE offers.</p>

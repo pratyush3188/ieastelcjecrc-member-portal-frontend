@@ -489,7 +489,13 @@ export default function ManageOffers() {
                                             <div className="flex items-center space-x-2">
                                                 <a
                                                     href="#"
-                                                    onClick={(e) => { e.preventDefault(); const p = offers.find((o) => (o._id || o.id) === editingOfferId).pdfPath; if (p) window.open(`${API_BASE_URL}${p}`, '_blank'); }}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        const p = offers.find((o) => (o._id || o.id) === editingOfferId).pdfPath;
+                                                        if (!p) return;
+                                                        const url = String(p).startsWith('http') ? p : `${API_BASE_URL}${p}`;
+                                                        window.open(url, '_blank');
+                                                    }}
                                                     className="text-xs text-gray-700 underline"
                                                 >
                                                     View uploaded PDF

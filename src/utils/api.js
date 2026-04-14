@@ -81,3 +81,30 @@ export async function apiDeleteOfferPdf(offerId) {
   return data;
 }
 
+/** Upload member documents (multipart). Returns { membership }. */
+export async function apiUploadMemberDocuments(filesByKey) {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const formData = new FormData();
+  Object.entries(filesByKey || {}).forEach(([key, file]) => {
+    if (file) formData.append(key, file);
+  });
+
+  const res = await fetch(`${API_BASE_URL}/api/me/documents`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!res.ok) throw new Error(data?.message || `Upload failed (${res.status})`);
+  return data;
+}
+
